@@ -1,0 +1,6 @@
+server/node.exe
+server/npm.cmd
+server/npx.cmd
+server/node_modules/
+server/nodevars.bat
+server/*.db
