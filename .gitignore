@@ -1,0 +1,8 @@
+server/node.exe
+server/npm.cmd
+server/node_modules/
+server/*.db
+client/node.exe
+client/npm.cmd
+client/node_modules/
+client/*.db
