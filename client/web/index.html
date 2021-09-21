@@ -1,52 +1,34 @@
-<!DOCTYPE html>
 <html>
 	<head>
-		<meta charset="UTF-8"/>
-		<meta name="viewport" content="width=device-width"/>
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdui@1.0.1/dist/css/mdui.min.css" integrity="sha384-cLRrMq39HOZdvE0j6yBojO4+1PrHfB7a9l5qLcmRm/fiWXYY+CndJPmyu5FV/9Tw" crossorigin="anonymous"/>
-		<script src="https://cdn.jsdelivr.net/npm/mdui@1.0.1/dist/js/mdui.min.js" integrity="sha384-gCMZcshYKOGRX9r6wbDrvF+TcCCswSHFucUzUPwka+Gr+uHgjlYvkABr95TCOz3A" crossorigin="anonymous"></script>
+		<meta charset="UTF-8">
+		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/socket.io@4.2.0/client-dist/socket.io.min.js" crossorigin="anonymous"></script>
+		<script>
+			function login(){
+				var user = document.getElementById("user").value;
+				var pass = document.getElementById("pass").value;
+				socket_io.emit("login",{"user":user, "pass":pass});
+			}
+		</script>
+		<script>
+			var socket_io = io("http://127.0.0.1:8080");
+			socket_io.on("login_ret",function(data){
+				if(data.status == 0){
+					document.getElementById("login").style.display = "none";
+					document.getElementById("logined").style.display = "block";
+					document.getElementById("logined").innerText = "You have logined:" + data.user;
+				}
+			});
+		</script>
 	</head>
-	<body class="mdui-drawer-body-left mdui-appbar-with-toolbar mdui-drawer-body-left mdui-theme-accent-pink mdui-theme-layout-auto mdui-loaded">
-		<button class="mdui-fab mdui-fab-fixed mdui-ripple mdui-color-theme-accent" onclick="mdui.alert('qwq')"><i class="mdui-icon material-icons">add</i></button>
-		<div class="mdui-appbar mdui-appbar-fixed">
-			<div class="mdui-toolbar mdui-color-indigo">
-				<a href="javascript:;" class="mdui-btn mdui-btn-icon" mdui-drawer="{target: '#drawer'}"><i class="mdui-icon material-icons">menu</i></a>
-				<a href="javascript:;" class="mdui-typo-headline">延时qwq</a>
-				<div class="mdui-toolbar-spacer"></div>
-				<a href="./" class="mdui-btn mdui-btn-icon"><i class="mdui-icon material-icons">refresh</i></a>
-				<a href="javascript:;" class="mdui-btn mdui-btn-icon"><i class="mdui-icon material-icons">more_vert</i></a>
-			</div>
+	<body>
+		<div id="login" style="display: block;">
+			<form>
+				用户名: <input type="text" id="user" value="admin"/><br>
+				密码: <input type="password" id="pass" value="adminpass"/><br>
+				<input type="button" value="登录" onclick="login();"/>
+			</form>
 		</div>
-		<div class="mdui-drawer" id="drawer">
-			<div class="mdui-card">
-				<div class="mdui-card-media">
-					<img src="card.jpg"/>
-				</div>
-			</div>
-			<div class="mdui-card mdui-center">
-				
-			</div>
-		</div>
-		<div class="mdui-container mdui-typo">
-			<div class="mdui-row mdui-col-xs-12">
-				<h1>qwq <small>awa</small></h1>
-				<div class="mdui-textfield mdui-textfield-floating-label">
-				  <label class="mdui-textfield-label">用户名</label>
-				  <input class="mdui-textfield-input" type="text" maxlength="114514" required />
-				  <div class="mdui-textfield-error">用户名不能为空</div>
-				</div>
-				<div class="mdui-textfield mdui-textfield-floating-label">
-					<label class="mdui-textfield-label">邮箱</label>
-					<input class="mdui-textfield-input" type="email" maxlength="114514" required />
-					<div class="mdui-textfield-error">邮箱格式错误</div>
-				</div>
-				<div class="mdui-textfield mdui-textfield-floating-label">
-				  <label class="mdui-textfield-label">密码</label>
-				  <input class="mdui-textfield-input" type="text" maxlength="114514" pattern="^.*(?=.{6,})(?=.*[a-z])(?=.*[A-Z]).*$" required />
-				  <div class="mdui-textfield-error">密码至少 6 位，且包含大小写字母</div>
-				  <div class="mdui-textfield-helper">请输入至少 6 位，且包含大小写字母的密码</div>
-				</div>
-			</div><br/><br/><br/>
+		<div id="logined" style="display: none;">
 		</div>
 	</body>
 </html>
