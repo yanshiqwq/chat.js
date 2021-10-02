@@ -1,23 +1,18 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/socket.io@4.2.0/client-dist/socket.io.min.js" crossorigin="anonymous"></script>
 		<script>
+			window.onload = function(){
+				wsLogin = new WebSocket('ws://localhost:3272/login');
+				wsLogin.onmessage = function(evt){
+					alert(evt.data);
+				}
+			}
 			function login(){
 				var user = document.getElementById("user").value;
 				var pass = document.getElementById("pass").value;
-				socket_io.emit("login",{"user":user, "pass":pass});
+				wsLogin.send(JSON.stringify({'profile': [user, pass]}));
 			}
-		</script>
-		<script>
-			var socket_io = io("http://127.0.0.1:8080");
-			socket_io.on("login_ret",function(data){
-				if(data.status == 0){
-					document.getElementById("login").style.display = "none";
-					document.getElementById("logined").style.display = "block";
-					document.getElementById("logined").innerText = "You have logined:" + data.user;
-				}
-			});
 		</script>
 	</head>
 	<body>
