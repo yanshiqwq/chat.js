@@ -222,7 +222,7 @@ function verify(req){
 	}
 	return ret;	
 }
-function main(callback){
+function main(){
 	rl.question('> ', function(input){
 		var argv = input.split(' ')
 		switch(argv[0]){
@@ -261,7 +261,6 @@ function main(callback){
 				error(getTime() + "[ERROR] Invalid command: " + argv[0] + ".");
 				break;
 		}
-		callback();
 		main();
 	});
 }
