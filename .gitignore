@@ -1,8 +1,6 @@
-server/node.exe
-server/npm.cmd
-server/node_modules/
-server/*.db
-client/node.exe
-client/npm.cmd
-client/node_modules/
-client/*.db
+*/node.exe
+*/npm.cmd
+*/node_modules/
+*/*.db
+*/dist/
+*/build.bat
