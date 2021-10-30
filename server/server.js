@@ -1,30 +1,33 @@
 
 const utils = require('./api/utils');
-eval(utils.setup);
+eval(utils.console.setup);
 
 const express = require('express');
 const expressws = require('express-ws');
-const bodyParser = require('body-parser');
 
 const httpApi = require('./api/http');
+const pageApi = require('./api/page');
 const wsApi = require('./api/ws');
+const dbApi = require('./api/db');
 
 // Config
 
 var port = 3272;
+var host = "0.0.0.0";
 
 // Server
 
 captchaList = {};
 userList = {};
-urlList = {};
+pageList = {};
 
 var app = express();
-app.use(bodyParser.json());
-expressws(app)
-httpApi(app);
-wsApi(app);
+expressws(app);
 
+httpApi(app);
+pageApi(app);
+
+wsApi(app);
 
 function main(){
 	rl.question('> ', (input) => {
@@ -35,7 +38,7 @@ function main(){
 				for(var user in userList){
 					userTokens.push(user.token);
 				}
-				log(`There are ${userTokens.length} users in the list:`);
+				emptyLine(() => {log(`There are ${userTokens.length} users in the list:`)});
 				info(userTokens.join(', '));
 				break;
 			case 'kick':
@@ -51,11 +54,11 @@ function main(){
 							}
 						}
 					}else{
-						emptyLine(() => { error(`Failed to close the connection "${argv[1]}" : ${err}`); });
+						emptyLine(() => {error(`Failed to close the connection "${argv[1]}" : ${err}`)});
 					}
 				}
 				if(kicked == false){
-					emptyLine(() => { error(`User or connection not exists: ${argv[1]}`); });
+					emptyLine(() => {error(`User or connection not exists: ${argv[1]}`)});
 				}
 				break;
 			case 'eval':
@@ -68,19 +71,23 @@ function main(){
 			case '':
 				break;
 			case 'stop':
-				process.exit();
+				dbApi.saveData(userList, pageList, (err) => {
+					if(err){
+						emptyLine(() => {error(`Failed to save data: ${err}`)});
+					}else{
+						emptyLine(() => {info(`Successfully saved data.`)});
+						process.exit();
+					}
+				});
 			default:
-				error(`Invalid command: ${argv[0]}.`);
+				warn(`Invalid command: ${argv[0]}.`);
 				break;
 		}
 		main();
 	});
 }
-new Promise(() => {rl.setPrompt('> ')})
-.then(app.listen(port))
-.then(log(`Server running at 0.0.0.0:${port}.`))	
-.then(rl.prompt())
-.then(main())
-.catch((err) => {
-	error(err);
+rl.setPrompt('> ')
+app.listen(port, host, function(){
+	info(`Server running at ${host}:${port}.`);
+	main();
 });
