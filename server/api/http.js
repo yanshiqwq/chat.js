@@ -1,43 +1,15 @@
 const utils = require('./utils');
-eval(utils.setup);
-
 const svgCaptcha = require('svg-captcha');
+const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const httpApi = (app) =>{
-	app.get('/url', async (req, res) =>{
-		switch(req.query.method){
-			case 'query':
-				var urlId = req.query.id;
-				var urlData = urlList[urlId];
-				if(urlData){
-					res.writeHead(200, {"Content-Type": "multipart/related"});
-					res.end(atob(urlData));
-				}else{
-					res.status(404);
-					res.json({code: 404, time: timeStamp(), id: urlId});
-				}
-				break;
-			case 'save':
-				var url = req.query.url;
-				var urlId = crypto.createHash('sha512').update(url).digest('hex');
-				emptyLine(() =>{log(`New archive: ${url}, id: ${urlId}`)});
-				var err, data = await saveUrl(url);
-				if(!err){
-					var urlData = data;
-					urlList[urlId] = urlData;
-					res.status(200);
-					res.json({code: 200, time: timeStamp(), id: urlId});
-				}else{
-					res.status(500);
-					res.json({code: 500, time: timeStamp(), id: urlId, error: err});
-				};
-				break;
-			default:
-				res.status(400);
-				res.json({code: 400, time: timeStamp(), id: urlId, error: "Unknown method"});
-		}
+eval(utils.console.setup);
+const httpApi = (app) => {
+	app.use(bodyParser.json());
+	app.use((req, res, next) => {
+		emptyLine(() => {log(`${req.ip.match(/\d+\.\d+\.\d+\.\d+/)} > ${req.method} "${req.originalUrl}"`)});
+		next();
 	});
-	app.get('/captcha', (req, res) =>{
+	app.get('/captcha', (req, res) => {
 		var captcha = svgCaptcha.create({
 			color: true,
 			inverse: false,
@@ -70,7 +42,7 @@ const httpApi = (app) =>{
 				res.json({code: 400, time: timeStamp(), message: 'Bad request'});
 		}
 	});
-	app.post('/register', (req, res) =>{
+	app.post('/register', (req, res) => {
 		try{
 			var reqJson = JSON.parse(req.body);
 			if (captchaList[reqJson.captcha[0]] == reqJson.captcha[1]){
@@ -87,7 +59,7 @@ const httpApi = (app) =>{
 			res.json({code: 400, time: timeStamp(), message: 'Bad request', error: err.message});
 		}
 	});
-	app.post('/login', function (req, res){
+	app.post('/login', (req, res) => {
 		var token = guid();
 		emptyLine(() =>{log(`New request: ${token}`)});
 		try{

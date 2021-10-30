@@ -131,10 +131,6 @@
     "wrappy": "^1.0.2",
     "yallist": "^4.0.0"
   },
-  "scripts": {
-    "test": "build.bat test",
-    "build": "build.bat release"
-  },
   "keywords": [],
   "author": "延时qwq",
   "license": "GPL-3.0-or-later",

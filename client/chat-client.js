@@ -1,31 +1,33 @@
 
 // Config
 
-var server = 'ws://localhost:3272/';
+var host = 'localhost';
+var port = 3272;
 
 // Define
 
 const http = require('http');
-const chalk = require('chalk');
 const readline = require('readline');
+const chalk = require('chalk');
+
 const error = function(log){console.error(chalk.bold.red(log))};
 const warn = function(log){console.warn(chalk.bold.yellow(log))};
 const log = function(log){console.log(chalk.bold.cyan(log))};
 const info = function(log){console.info(chalk.bold.greenBright(log))};
+
 const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
+	input: process.stdin,
+	output: process.stdout
 });
-const emptyLine = function(callback){
-	readline.clearLine(process.stdout, 0, function(){
+const emptyLine = async function(callback){
+	await readline.clearLine(process.stdout, 0, function(){
 		readline.cursorTo(process.stdout, 0, function(){
 			callback();
 		});
 	});
+	rl.prompt();
 }
-var wsc = require('websocket').client;
-var client = new wsc();
-const gettime = function(){
+const getTime = function(){
 	if(new Date().getHours()<10){
 		var hours="0"+new Date().getHours();
 	}else{
@@ -43,41 +45,76 @@ const gettime = function(){
 	}
 	return "["+hours+":"+minutes+":"+seconds+"] ";
 }
+const login = function(host, port, id, key){
+	var req = http.request({
+		hostname: host,
+		port: port,
+		path: '/login',
+		method: 'POST',
+		headers: {
+			'Content-Type': 'text/json'
+		}
+	}, function (res) {
+		res.setEncoding('utf8');
+		res.on('data', function (raw) {
+			var data = JSON.parse(JSON.parse(raw));
+			if(data.code != 200){
+				emptyLine(() => {error(getTime() + "[ERROR] Login failed: " + data.message)});
+			}
+		});
+	});
+	req.write(JSON.stringify({
+		'id': id,
+		'key': key
+	}));
+	req.on("error", function(err){
+		console.log(err.message);
+	});
+}
 
 // Client
 
 var connection;
-client.on('connectFailed', function(err){
+var wsc = require('websocket').client;
+var client = new wsc();
+/*loginClient.on('connectFailed', function(err){
 	emptyLine(function(){
-		if(err == 'Error: Server responded with a non-101 status: 401 Unauthorized\n' + 'Response Headers Follow:\n' + 'connection: close\n' + 'content-type: text/html\n' + 'content-length: 12\n'){
-			error(gettime() + '[USER] User unauthorized.');
-			process.exit();
-		}else{
-			error(gettime() + '[CONN] Connection error: ' + err.toString());
-		}
-		log(gettime() + '[CONN] Reconnecting to the server...');
+		log(getTime() + '[INFO] Reconnecting to the server...');
 		rl.prompt();
 	});
 	reconnectTimer = setTimeout(function(){
-		client.connect(server + '?id=' + userProfile[0] + '&key=' + userProfile[1]);
+		loginClient.connect(server + '/login?id=' + user[0] + '&key=' + user[1]);
 	}, 3000);
 });
+loginClient.on('connect', function(conn){
+	conn.on('message', function(message) {
+		emptyLine(function(){
+			messageJson = JSON.parse(message.utf8Data);
+			if(messageJson['code'] == 200){
+				emptyLine(function(){
+					log(getTime() + '[INFO] Successfuly login, got process token: ' + messageJson['token'] + '.');
+					rl.prompt();
+				});
+			}
+			rl.prompt();
+		});
+	});
+});*/
 client.on('connect', function(conn){
 	connection = conn;
 	emptyLine(function(){
-		log(gettime() + '[CONN] Successfuly connected.');
+		log(getTime() + '[INFO] Successfuly connected.');
 		rl.prompt();
 	});
 	conn.on('error', function(err) {
 		emptyLine(function(){
-			error(gettime() + "[CONN] Connection error: " + err.toString());
+			error(getTime() + "[ERROR] Connection error: " + err.toString());
 			rl.prompt();
 		});
-		client.connect(server + '?id=' + user + '&key=' + pass);
 	});
 	conn.on('close', function() {
 		emptyLine(function(){
-			log(gettime() + '[CONN] Connection closed.');
+			log(getTime() + '[INFO] Connection closed.');
 			rl.prompt();
 		});
 	});
@@ -87,21 +124,21 @@ client.on('connect', function(conn){
 			if(messageJson['code'] == 200){
 				switch(messageJson['type']){
 					case 'login':
-						info(gettime() + '[USER] Successfuly login, token: ' + messageJson['token']);
-						var client_message = JSON.stringify({method: "login", profile: userProfile});
+						info(getTime() + '[INFO] Successfuly login, token: ' + messageJson['token']);
+						var client_message = JSON.stringify({method: "login", profile: user});
 						conn.send(client_message);
 						break;
 					case 'message':
-						log(gettime() + '[CHAT] <' + messageJson['id'] + '> ' + messageJson['message'][1]);
+						log(getTime() + '[INFO] <' + messageJson['id'] + '> ' + messageJson['message'][1]);
 						break;
 					case 'userJoin':
-						log(gettime() + '[CHAT] ' + messageJson['id'] + ' joined the chat room.');
+						log(getTime() + '[INFO] ' + messageJson['id'] + ' joined the chat room.');
 						break;
 					case 'userLeft':
-						log(gettime() + '[CHAT] ' + messageJson['id'] + ' left the chat room.');
+						log(getTime() + '[INFO] ' + messageJson['id'] + ' left the chat room.');
 						break;
 					default:
-						error(gettime() + '[CHAT] Unknown message type.');
+						error(getTime() + '[INFO] Unknown message type.');
 				}
 			}
 			rl.prompt();
@@ -112,52 +149,60 @@ function main(){
 	rl.question('> ', function(input){
 		var argv = input.split(' ')
 		switch(argv[0]){
+			case 'conn':
+				try{
+					login(host, port, user[0], user[1]);
+				}catch(err){
+					error(getTime() + "[ERROR] " + err);
+				}
+				break;
 			case 'stop':
 				try{
 					clearTimeout(reconnectTimer);
 					emptyLine(function(){
-						log(gettime() + "[CONN] Stopped reconnecting.");
+						log(getTime() + "[INFO] Stopped reconnecting.");
 						rl.prompt();
 					});
 				}catch(err){
-					error(gettime() + "[CONN] " + err);
+					error(getTime() + "[ERROR] " + err);
 				}
+				break;
 			case 'eval':
 				try{
 					eval(input.slice(5));
 				}catch(err){
-					error(gettime() + "[EVAL] " + err);
+					error(getTime() + "[ERROR] " + err);
 				}
 				break;
 			case 'send':
 				try{
 					if(argv[1] == undefined | argv[1] == ''){
-						error(gettime() + "[CHAT] Message cannot be null. ");
+						error(getTime() + "[ERROR] Message cannot be null. ");
 					}else{
 						var client_message = JSON.stringify({method: "message", message: input.slice(5)});
 						connection.send(client_message);
 					}
 				}catch(err){
 					if(err == "TypeError: Cannot read property 'send' of undefined"){
-						error(gettime() + "[CHAT] Not connected to any server. ");
+						error(getTime() + "[ERROR] Not connected to any server. ");
 					}else{
-						error(gettime() + "[CHAT] Client error: " + err.toString());
+						error(getTime() + "[ERROR] Client error: " + err.toString());
 					}
 				}
 				break;
 			default:
-				error(gettime() + "[CHAT] Invalid command.");
+				error(getTime() + "[ERROR] Invalid command.");
 		}
 		main();
 	});
 }
-var userProfile = []
-rl.question(chalk.bold.cyan(gettime() + '[USER] Username > '), function(user){
-	rl.question(chalk.bold.cyan(gettime() + '[USER] Password > '), function(pass){
+var user = []
+rl.question(chalk.bold.cyan(getTime() + '[INFO] Username > '), function(id){
+	rl.question(chalk.bold.cyan(getTime() + '[INFO] Password > '), function(key){
 		rl.setPrompt('> ');
-		log(gettime() + '[CONN] Connecting to the server...')
-		client.connect(server + '?id=' + user + '&key=' + pass);
-		userProfile = [user, pass];
+		log(getTime() + '[INFO] Connecting to the server...')
+		login(host, port, id, key);
+		user = [id, key];
 		main();
 	});
 });
