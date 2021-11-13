@@ -1,6 +1,10 @@
 const readline = require('readline');
-const zlib = require('zlib');
+const cheerio = require('cheerio');
+const request = require('request');
 const chalk = require('chalk');
+const util = require('util');
+const path = require('path');
+const url = require('url');
 const utils = {
 	"console": {
 		"global": function(){
@@ -43,30 +47,11 @@ const utils = {
 				console.info(chalk.bold.greenBright(getTime() + log))
 			}
 		},
-		"requireChilkat": function(){
-			var os = require('os');
-			if(os.platform() == 'win32'){  
-				if(os.arch() == 'ia32'){
-					var chilkat = require('@chilkat/ck-node16-win-ia32');
-				}else{
-					var chilkat = require('@chilkat/ck-node16-win64'); 
-				}
-			}else if(os.platform() == 'linux'){
-				if(os.arch() == 'arm'){
-					var chilkat = require('@chilkat/ck-node16-arm');
-				}else if(os.arch() == 'x86'){
-					var chilkat = require('@chilkat/ck-node16-linux32');
-				}else{
-					var chilkat = require('@chilkat/ck-node16-linux64');
-				}
-			}else if(os.platform() == 'darwin'){
-				var chilkat = require('@chilkat/ck-node16-macosx');
-			}
-			global.chilkat = chilkat;
-		},
 		"setup": `
 			utils.console.global();
-			utils.console.requireChilkat();
+			String.prototype.render = function(...args){
+				return require("util").format(this.toString(), ...args);
+			}
 			var types = ["error", "warn", "log", "info"];
 			for(var type in types){
 				eval(\`
@@ -130,33 +115,57 @@ const utils = {
 		}
 		return `[${hours}:${minutes}:${seconds}] `;
 	},
-	"savePage": function(url, callback){
-		var mht = new chilkat.Mht();
-		data = mht.GetMHT(url);
-		if(mht.LastMethodSuccess == true){
-			zlib.gzip(data, function(err, gzipData){
-				if(err){
-					callback(err);
-				}else{
-					callback(false, gzipData);
-				};
-			});
-		}else{
-			callback(true, mht.LastErrorText);
+	"randStr": function(length, chars){
+		var result = '';
+		for(var i = length; i > 0; --i){
+			result += chars[Math.floor(Math.random() * chars.length)];
 		}
+		return result;
 	},
-	"queryPage": function(pageId, callback){
-		zlib.gunzip(Buffer.from(pageList[pageId], "base64"), function(err, pageData){
-			if(err){
-				callback(err);
-			}else{
-				callback(false, pageData);
-			};
-		});
+	"getPromise": util.promisify(request.get),
+	"savePage": async function(pageUrl){
+		const userAgents = [
+			'Mozilla/5.0 (Windows NT 10; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0'
+		];
+		var userAgent = userAgents[parseInt(Math.random() * userAgents.length)];
+		var res = await getPromise(pageUrl, {headers: {'User-Agent': userAgent}});
+		while(res.statusCode in [301, 302, 303, 307]){
+			var link = res.headers['Location'];
+			var res = await getPromise(link, {headers: {'User-Agent': userAgent}});
+		}
+		$ = cheerio.load(res.body);
+		var linkRaw = [];
+		var links = [];
+		var jsObjects = $("script").filter("src");
+		var cssObjects = $("link").filter("href");
+		var backImgObjects = $("div").filter("style*=background-image");
+		for(var index in jsObjects){
+			if(util.isObject(jsObjects[index]) && "attrib" in jsObjects[index]){
+				linkRaw.push(jsObjects[index].attrib.src);
+			}
+		}
+		for(var index in cssObjects){
+			linkRaw.push(cssObjects[index].attrib.href);
+		}
+		for(var index in backImgObjects){
+			linkRaw.push(backImgObjects[index].attrib.style.match(/(?<=background-image:[\s]+).+?(?=;)/)[0]);
+		}
+		console.dir(linkRaw)
+		for(var index in linkObjects){
+			var link = linkObjects[index].attribs.href;
+			if(link.substr(0,1) != "#"){
+				if(link.substr(0,2) == "//"){
+					link = url.parse(pageUrl).protocol + link;
+				}
+				if(this.testUrl(link)){
+					links.push(link);
+				}
+			}
+		}
+		return links;
 	},
 	"testUrl": function(url){
-		var re = new RegExp(/^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/);
-		return re.test(url);
+		return new RegExp(/^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/).test(url);
 	}
 }
 for(var value in utils){

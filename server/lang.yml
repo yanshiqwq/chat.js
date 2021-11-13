@@ -1,0 +1,74 @@
+en-us:
+  server:
+    invalidCmd: "Invalid command: %s."
+    serverRunningAt: "Server running at %s:%s."
+  cmd:
+    list:
+      countUser: "There are %s users in the list:"
+    kick:
+      kickFailed: "Failed to close the connection '%s' : %s"
+      connectionNotExist: "User or connection not exists: %s"
+    stop:
+      saveFailed: "Failed to save data: %s"
+      saved: "Successfully saved data."
+  http:
+    log: "%s > %s '%s'"
+    captcha:
+      newCaptcha: "New captcha: %s, id: %s"
+      badRequest: "Bad request"
+    register:
+      validationFailed: "Validation failed"
+      badRequest: "Bad request"
+    login:
+      newRequest: "New request: %s"
+      loginError: "[%s] %s"
+  page:
+    queryPage:
+      invalidPageId: "Invalid pageId"
+    savePage:
+      newArchive: "New archive: %s, id: %s"
+      savedArchive: "Successfully saved archive: %s, id: %s"
+      failedSavingArchive: "Failed to save archive: %s, id: %s, err: %s"
+      invalidUrl: "Invalid url"
+  ws:
+    newConnection: "New connection: %d"
+    userJoin: "%d joined the chat room."
+    getEmptyMessage: "< undefined"
+    unexpectedEnd: "Unexpected end of message"
+zh-cn:
+  server:
+    invalidCmd: "错误的命令: %s."
+    serverRunningAt: "服务器已运行: %s:%s."
+  cmd:
+    list:
+      countUser: "有以下 %s 个用户:"
+    kick:
+      kickFailed: "无法关闭连接 '%s' : %s"
+      connectionNotExist: "用户或连接不存在: %s"
+    stop:
+      saveFailed: "保存数据失败: %s"
+      saved: "保存数据成功."
+  http:
+    log: "%s > %s '%s'"
+    captcha:
+      newCaptcha: "新的验证码请求: %s, id: %s"
+      badRequest: "请求错误"
+    register:
+      validationFailed: "验证失败"
+      badRequest: "请求错误"
+    login:
+      newRequest: "新的登录请求: %s"
+      loginError: "[%s] %s"
+  page:
+    queryPage:
+      invalidPageId: "错误的pageId"
+    savePage:
+      newArchive: "新的页面保存请求: %s, id: %s"
+      savedArchive: "页面保存成功: %s, pageId: %s"
+      failedSavingArchive: "页面保存失败: %s, id: %s, err: %s"
+      invalidUrl: "链接有误"
+  ws:
+    newConnection: "新的连接: %d"
+    userJoin: "%d 加入了聊天室."
+    getEmptyMessage: "< 空"
+    unexpectedEnd: "消息意外终止"

@@ -1,20 +1,21 @@
-function verify(params, callback, callbackError){
+const utils = require('./utils');
+eval(utils.console.setup);
+
+function verify(params, callback){
 	/*var ret = false;
 	if (userList[params["id"]] == params["key"]) {
 		ret = true;
 	}
 	return ret;*/
-	//callback();
-	callbackError();
+	callback()
 }
 const wsApi = function(app){
 	app.ws('/message', function(ws, req){
-		ws.token = crypto.createHash('sha256').update(req.headers['sec-websocket-key']).digest('hex').slice(1,8);
-		
-		emptyLine(() => {log('New connection: ' + ws.token)});
+		ws.token = crypto.createHash(config.ws.wsIdGenerator).update(req.headers['sec-websocket-key']).digest('hex').slice(1,8);
+		emptyLine(() => {log(lang.ws.newConnection.render(ws.token))});
 		verify(req.query, () => {
 			userList[ws.token] = ws;
-			info(`${ws.id} joined the chat room.`);
+			info(lang.ws.userJoin.render(ws.id));
 			var msg = JSON.stringify({code: 200, time: timeStamp(), type: 'userJoin', id: ws.id});
 			for(var user in userList){
 				userList[user].send(msg);
@@ -23,14 +24,14 @@ const wsApi = function(app){
 			ws.on('message', function(raw){
 				var message = JSON.parse(raw);
 				if(message == undefined || message == ''){
-					emptyLine(() => {log('< undefined')});
-					var msg = JSON.stringify({code: 400, time: timeStamp(), type: 'error', message: 'Unexpected end of message'});
+					emptyLine(() => {log(lang.ws.getEmptyMessage)});
+					var msg = JSON.stringify({code: 400, time: timeStamp(), type: 'error', message: lang.ws.unexpectedEnd});
 					ws.send(msg);
 					emptyLine(() => {warn('> ' + msg)});
 				}else{
 					emptyLine(() => {
 						try{
-							log('' + ws.token + ' > ' + raw);
+							log(ws.token + ' > ' + raw);
 							switch(message['method']){
 								case 'message':
 									var msg = JSON.stringify({code: 200, id: ws.id, time: timeStamp(), type: 'message', message: ['text', message['message']]});
