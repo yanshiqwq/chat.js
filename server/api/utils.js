@@ -1,12 +1,21 @@
+/**
+ * @file utils.js 一些实用函数
+ * @author 延时qwq <yanshiqwq@126.com>
+ * @version v1.4.1
+ */
+
 const readline = require('readline');
-const cheerio = require('cheerio');
 const request = require('request');
 const chalk = require('chalk');
 const util = require('util');
-const path = require('path');
-const url = require('url');
 const utils = {
 	"console": {
+		/**
+		 * @function global 将所有的utils函数公开为全局函数
+		 * @since v1.3.1
+		 * @descript 只有程序启动时才会用得到
+		 * @example utils.console.global();
+		 */
 		"global": function(){
 			for(var value in utils){
 				if(value != "console"){
@@ -14,45 +23,59 @@ const utils = {
 				}
 			}
 		},
+		/**
+		 * @function error 错误
+		 * @since v1.1
+		 * @param {any} log - 要显示的内容
+		 * @param {bool} hideTime - 是否隐藏时间
+		 * @param {string} cws - 获取运行此函数脚本的名称(Current Working Script)
+		 * @example error("qwq", false, "server.js");
+		 */
 		"error": function(log, hideTime, cws){
-			if(hideTime == undefined){
-				log = `[${cws}] [E] ${log}`;
-				console.error(chalk.bold.red(getTime() + log));
-			}else{
-				console.error(chalk.bold.red(log));
-			}
+			console.error(chalk.bold.red(hideTime ? "" : getTime() + `[${cws}] [E] ${log}`));
 		},
+		/**
+		 * @function warn 警告
+		 * @see error
+		 */
 		"warn": function(log, hideTime, cws){
-			if(hideTime == undefined){
-				log = `[${cws}] [W] ${log}`;
-				console.warn(chalk.bold.yellow(getTime() + log))
-			}else{
-				console.warn(chalk.bold.yellow(log))
-			}
-			
+			console.warn(chalk.bold.yellow(hideTime ? "" : getTime() + `[${cws}] [W] ${log}`));
 		},
+		/**
+		 * @function log 日志
+		 * @see error
+		 */
 		"log": function(log, hideTime, cws){
-			if(hideTime == undefined){
-				log = `[${cws}] [L] ${log}`;
-				console.log(chalk.bold.cyan(getTime() + log))
-			}else{
-				console.log(chalk.bold.cyan(getTime() + log))
-			}
+			console.log(chalk.bold.cyan(hideTime ? "" : getTime() + `[${cws}] [E] ${log}`));
 		},
+		/**
+		 * @function info 信息
+		 * @see error
+		 */
 		"info": function(log, hideTime, cws){
-			if(hideTime == undefined){
-				log = `[${cws}] [I] ${log}`;
-				console.info(chalk.bold.greenBright(getTime() + log))
-			}else{
-				console.info(chalk.bold.greenBright(getTime() + log))
-			}
+			console.info(chalk.bold.greenBright(hideTime ? "" : getTime() + `[${cws}] [E] ${log}`));
 		},
+		/**
+		 * @function debug 调试
+		 * @see error
+		 */
+		"debug": function(log, hideTime, cws){
+			console.debug(chalk.bold.grey(hideTime ? "" : getTime() + `[${cws}] [D] ${log}`));
+		},
+		/**
+		 * @function setup 初始化
+		 * @descript 每个脚本都需eval执行此字符串函数以初始化utils
+		 * @example eval(utils.console.setup);
+		 * 
+		 * @function String.prototype.render 渲染
+		 * @descript 将变量载入字符串
+		 * @example info(lang.server.serverRunningAt.render(config.server.host, config.server.port));
+		 */
 		"setup": `
-			utils.console.global();
+			var types = ["error", "warn", "log", "info", "debug"];
 			String.prototype.render = function(...args){
 				return require("util").format(this.toString(), ...args);
 			}
-			var types = ["error", "warn", "log", "info"];
 			for(var type in types){
 				eval(\`
 					function \${types[type]}(log, hideTime){
@@ -62,10 +85,23 @@ const utils = {
 			}
 		`
 	},
+	/**
+	 * @instance rl readline模块初始化
+	 * @since v1.1
+	 * @descript 可以通过rl调用readline
+	 * @example rl.prompt();
+	 */
 	"rl": readline.createInterface({
 		input: process.stdin,
 		output: process.stdout
 	}),
+	/**
+	 * @function getCookie 获取cookie
+	 * @since v1.3
+	 * @deprecated v1.3
+	 * @param {object} req - express的req对象
+	 * @returns {list} cookie列表
+	 */
 	"getCookie": function(req){
 		var cookies = {};
 		req.headers.cookie && req.headers.cookie.split(';').forEach(function(cookie){
@@ -74,17 +110,41 @@ const utils = {
 		});
 		return cookies;
 	},
-	"emptyLine": async function(callback){
+	/**
+	 * @function emptyLine 清空当前行
+	 * @since v1.1
+	 * @descript 一般会搭配输出命令使用
+	 * @param {callback} callback - 回调函数
+	 * @param {bool} hidePrompt - 是否隐藏命令提示符
+	 * 
+	 * @callback callback
+	 * @function callback 清空行执行的回调函数
+	 */
+	"emptyLine": async function(callback, hidePrompt){
 		await readline.clearLine(process.stdout, 0, function(){
 			readline.cursorTo(process.stdout, 0, function(){
 				callback();
+				if(!hidePrompt){
+					this.rl.prompt();
+				}
 			});
 		});
-		utils.rl.prompt();
 	},
+	/**
+	 * @function timeStamp 获取时间戳
+	 * @since v1.1
+	 * @example console.log(timeStamp());
+	 * @returns {string} 时间戳
+	 */
 	"timeStamp": function(){
 		return new Date().getTime();
 	},
+	/**
+	 * @function guid
+	 * @since v1.0
+	 * @example console.log(guid());
+	 * @returns {string} 生成的GUID
+	 */
 	"guid": function(){
 		var s = [];
 		var hexDigits = '0123456789abcdef';
@@ -97,6 +157,12 @@ const utils = {
 		var guid = s.join('');
 		return guid;
 	},
+	/**
+	 * @function getTime 获取时间
+	 * @since v1.0
+	 * @example console.log(guid());
+	 * @returns {string} 时间
+	 */
 	"getTime": function(){
 		if(new Date().getHours() < 10) {
 			var hours = `0${new Date().getHours()}`;
@@ -115,6 +181,13 @@ const utils = {
 		}
 		return `[${hours}:${minutes}:${seconds}] `;
 	},
+	/**
+	 * @function randStr 生成随机字符串
+	 * @since v1.4
+	 * @param {number} length - 字符串长度
+	 * @param {string} chars - 字符列表
+	 * @returns {string} 生成的随机字符串
+	 */
 	"randStr": function(length, chars){
 		var result = '';
 		for(var i = length; i > 0; --i){
@@ -122,52 +195,34 @@ const utils = {
 		}
 		return result;
 	},
+	/**
+	 * @function getPromise 将request模块的get promise化
+	 * @since v1.4
+	 * @see request.get
+	 * @returns {Promise} get请求返回值
+	 */
 	"getPromise": util.promisify(request.get),
-	"savePage": async function(pageUrl){
-		const userAgents = [
-			'Mozilla/5.0 (Windows NT 10; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0'
-		];
-		var userAgent = userAgents[parseInt(Math.random() * userAgents.length)];
-		var res = await getPromise(pageUrl, {headers: {'User-Agent': userAgent}});
-		while(res.statusCode in [301, 302, 303, 307]){
-			var link = res.headers['Location'];
-			var res = await getPromise(link, {headers: {'User-Agent': userAgent}});
-		}
-		$ = cheerio.load(res.body);
-		var linkRaw = [];
-		var links = [];
-		var jsObjects = $("script").filter("src");
-		var cssObjects = $("link").filter("href");
-		var backImgObjects = $("div").filter("style*=background-image");
-		for(var index in jsObjects){
-			if(util.isObject(jsObjects[index]) && "attrib" in jsObjects[index]){
-				linkRaw.push(jsObjects[index].attrib.src);
-			}
-		}
-		for(var index in cssObjects){
-			linkRaw.push(cssObjects[index].attrib.href);
-		}
-		for(var index in backImgObjects){
-			linkRaw.push(backImgObjects[index].attrib.style.match(/(?<=background-image:[\s]+).+?(?=;)/)[0]);
-		}
-		console.dir(linkRaw)
-		for(var index in linkObjects){
-			var link = linkObjects[index].attribs.href;
-			if(link.substr(0,1) != "#"){
-				if(link.substr(0,2) == "//"){
-					link = url.parse(pageUrl).protocol + link;
-				}
-				if(this.testUrl(link)){
-					links.push(link);
-				}
-			}
-		}
-		return links;
-	},
+	/**
+	 * @function testUrl 检测字符串是否为Url链接
+	 * @since v1.3.1
+	 * @param {string} url 
+	 * @returns {bool} 是否为Url
+	 */
 	"testUrl": function(url){
 		return new RegExp(/^(?:http(s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)+[\w\-\._~:/?#[\]@!\$&'\(\)\*\+,;=.]+$/).test(url);
+	},
+	/**
+	 * @function exit 执行函数并退出
+	 * @since v1.4.1
+	 * @param {callback} func 清空行后需要执行的函数
+	 * @param {Number} code 程序返回值
+	 */
+	"exit": async function(func, code){
+		await this.emptyLine(func, true);
+		setTimeout(() => {process.exit(code || 1)});
 	}
 }
+// 公开所有函数
 for(var value in utils){
 	exports[value] = utils[value];
 }

@@ -1,6 +1,6 @@
-*/node.exe
-*/npm.cmd
-*/node_modules/
-*/*.db
-*/dist/
-*/build.bat
+node_modules
+.vs
+node.exe
+npm.cmd
+*.db
+dist

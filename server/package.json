@@ -4,6 +4,7 @@
 	"main": "server.js",
 	"dependencies": {
 		"@chilkat/ck-node16-win64": "^9.50.88",
+		"axios": "^0.24.0",
 		"base64-js": "^1.5.1",
 		"body-parser": "^1.19.0",
 		"buffer": "^5.7.1",

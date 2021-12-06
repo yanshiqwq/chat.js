@@ -4,9 +4,9 @@ eval(utils.console.setup);
 const dbApi = require('./db');
 const cmdApi = {
 	'list': function(){
-		var userTokens = [];
+		var uid = [];
 		for(var user in userList){
-			userTokens.push(user.token);
+			uid.push(user);
 		}
 		emptyLine(() => {log(lang.cmd.list.countUser.render(userTokens.length))});
 		info(userTokens.join(config.cmd.userSplit));
@@ -16,7 +16,7 @@ const cmdApi = {
 			try{
 				userList[argv[1]].close();
 			}catch(err){
-				emptyLine(() => {error(lang.cmd.kick.kickFailed.render(argv[1], err))});
+				emptyLine(() => {warn(lang.cmd.kick.kickFailed.render(argv[1], err.stack))});
 			}
 		}else{
 			var kicked = false;
@@ -28,22 +28,26 @@ const cmdApi = {
 			}
 		}
 		if(kicked == false){
-			emptyLine(() => {error(lang.cmd.kick.connectionNotExist.render(argv[1]))});
+			emptyLine(() => {warn(lang.cmd.kick.connectionNotExist.render(argv[1]))});
 		}
 	},
 	'eval': function(){
 		try{
 			eval(input.slice(5));
 		}catch(err){
-			error(err);
+			error(err.stack);
 		}
 	},
 	'stop': function(){
-		dbApi.saveData(userList, pageList, function(err){
+		dbApi.saveData(JSON.stringify({
+			user: userList, 
+			page: pageList,
+			chat: chatList
+		}), async function(err){
 			if(err){
-				emptyLine(() => {error(lang.cmd.stop.saveFailed.render(err))});
+				emptyLine(() => {warn(lang.cmd.stop.saveFailed.render(err.stack))});
 			}else{
-				emptyLine(() => {info(lang.cmd.stop.saved)});
+				await emptyLine(() => {log(lang.cmd.stop.saved)});
 				process.exit();
 			}
 		});

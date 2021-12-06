@@ -1,0 +1,9 @@
+POST http://127.0.0.1:3272/register
+
+{
+    "id": "yanshiqwq",
+    "key": "minecraft666",
+    "captcha": [
+        "7f7612f7-69e5-c0da-00cd-ccb8eeacac22", "MCLG"
+    ]
+}

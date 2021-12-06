@@ -7,7 +7,12 @@ const crypto = require('crypto');
 const httpApi = function(app){
 	app.use(bodyParser.json());
 	app.use((req, _res, next) => {
-		emptyLine(() => {log(lang.http.log.render(req.ip.match(/\d+\.\d+\.\d+\.\d+/)[0], req.method, req.originalUrl))});
+		try{
+			var ip = req.ip.match(/\d+\.\d+\.\d+\.\d+/)[0];
+			emptyLine(() => {log(lang.http.log.render(ip, req.method, req.originalUrl))});
+		}catch(err){
+			emptyLine(() => {error(err.stack)});
+		}
 		next();
 	});
 	app.get('/captcha', (req, res) => {
@@ -26,59 +31,48 @@ const httpApi = function(app){
 		}
 		var id = crypto.createHash('md5').update(captcha.text).digest('hex');
 		var uuid = id.slice(0, 8) + '-' + id.slice(8, 12) + '-' + id.slice(12, 16) + '-' + id.slice(16, 20) + '-' + id.slice(20, 32);
-		emptyLine(() =>{log(lang.http.captcha.newCaptcha.render(captcha.text, id))});
+		emptyLine(() =>{log(lang.http.captcha.newCaptcha.render(captcha.text, uuid))});
 		captchaList[uuid] = captcha;
 		switch(req.query.type){
 			case undefined:
 			case 'json':
-				res.writeHead(200, config.http.captchaHeader.json);
-				res.json({code: 200, time: timeStamp(), captcha: captcha.data, id: uuid});
+				res.status(200);
+				res.set(config.http.captchaHeader.json);
+				res.json({code: 200, time: timeStamp(), id: uuid, captcha: captcha.data});
 				break;
 			case 'html':
-				res.writeHead(200, config.http.captchaHeader.html);
+				res.status(200);
+				res.set(config.http.captchaHeader.html);
 				res.send(config.http.html(captcha.data, uuid));
 				break;
 			default:
-				res.writeHead(400, config.http.captchaHeader.default);
+				res.status(400);
+				res.set(config.http.captchaHeader.default);
 				res.json({code: 400, time: timeStamp(), message: lang.http.captcha.badRequest});
 		}
 	});
 	app.post('/register', (req, res) => {
 		try{
-			var reqJson = JSON.parse(req.body);
-			if(captchaList[reqJson.captcha[0]] == reqJson.captcha[1]){
-				delete captchaList[reqJson.captcha[0]];
-				userList[reqJson.id] = reqJson.key;
-				res.status(200);
-				res.json({code: 200, time: timeStamp()});
+			var reqJson = req.body;
+			if(reqJson.captcha[0] in captchaList){
+				if(captchaList[reqJson.captcha[0]].text == reqJson.captcha[1].toLowerCase()){
+					delete captchaList[reqJson.captcha[0]];
+					var uid = guid();
+					userList[uid] = {id: reqJson.id, key: reqJson.key};
+					res.status(200);
+					res.json({code: 200, time: timeStamp(), uid: uid});
+					emptyLine(() =>{info(lang.http.register.newUser.render(reqJson.id, uid, reqJson.key))});
+				}else{
+					res.status(400);
+					res.json({code: 400, time: timeStamp(), message: lang.http.register.validationFailed});
+				}
 			}else{
 				res.status(400);
-				res.json({code: 400, time: timeStamp(), message: lang.http.register.validationFailed});
+				res.json({code: 400, time: timeStamp(), message: lang.http.register.invalidCaptcha});
 			}
 		}catch(err){
 			res.status(400);
-			res.json({code: 400, time: timeStamp(), message: lang.http.register.badRequest, error: err.message});
-		}
-	});
-	app.post('/login', (req, res) => {
-		var token = guid();
-		emptyLine(() =>{log(lang.http.login.newRequest.render(token))});
-		try{
-			console.dir(req.post);
-			message = JSON.parse(req.body);
-			userList[token] ={
-				'id': message['profile'][0],
-				'key': message['profile'][1]
-			};
-			res.status(200);
-			var message = {code: 200, time: timeStamp(), type: 'login', token: token, maxAge: 60};
-			res.json(JSON.stringify(message));
-			emptyLine(() => {log(JSON.stringify(message))});
-		}catch(err){
-			res.status(400);
-			var message = {code: 400, time: timeStamp(), type: 'login', token: token, message: err.message};
-			res.json(JSON.stringify(message));
-			emptyLine(() => {warn(lang.http.login.loginError.render(token, JSON.stringify(message)))});
+			res.json({code: 400, time: timeStamp(), message: lang.http.register.badRequest, error: err.stack});
 		}
 	});
 }

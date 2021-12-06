@@ -25,7 +25,7 @@ http:
 cmd:
   userSplit: ", "
 db:
-  dataFile: "data.json"
+  dataFile: "data.db"
 page:
   pageIdGenerator: "sha256"
   pageHeader:
