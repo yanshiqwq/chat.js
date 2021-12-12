@@ -43,7 +43,7 @@ const httpApi = function(app){
 			case 'html':
 				res.status(200);
 				res.set(config.http.captchaHeader.html);
-				res.send(config.http.html(captcha.data, uuid));
+				res.send(config.http.captchaHtml(captcha.data, uuid));
 				break;
 			default:
 				res.status(400);

@@ -14,11 +14,11 @@ axios.post('http://127.0.0.1:3272/register', req).then(function(res){
 	log(res.data);
 }).catch(function(err){
 	if(err.response){
-		warn(`HTTP/1.1 ${err.response.status}`);
-		console.dir(err.response.data);
+		error(`HTTP/1.1 ${err.response.status}`);
+		fatal(err.response.data);
 	}else if(err.request){
 		info(err.request);
 	}else{
-		error(err.stack);
+		fatal(err.stack);
 	}
 });

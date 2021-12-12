@@ -1,5 +1,6 @@
 en-us:
   server:
+    forceStop: "Sure to force exit?"
     loadDataFailed: "Failed to load database: %s"
     dataFileReadOnly: "Data file is read-only."
     loadedData: "Successfully loaded saved data."
@@ -43,6 +44,7 @@ en-us:
       badRequest: "Bad request"
 zh-cn:
   server:
+    forceStop: "确定强制退出吗?"
     loadConfigFailed: "无法加载配置文件: %s"
     loadDataFailed: "无法加载数据库: %s"
     dataFileReadOnly: "数据文件为只读."

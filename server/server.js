@@ -7,6 +7,7 @@
  * @version v1.4.1
  */
 
+global.logLevel = "debug";
 const utils = require('./api/utils');
 eval(utils.console.setup);
 utils.console.global();
@@ -35,7 +36,7 @@ const dbApi = require('./api/db');
  * @throws {Promise.Error} "Failed to load config" 因为一些未捕获的原因无法加载配置文件
  */
 function loadConfig(){
-	return new Promise(function(resolve, reject){
+	return new Promise(async function(resolve, reject){
 		/**
 		 * @function parseConfig 解析配置文件
 		 * @returns {Promise.Object} @see ymlConfig
@@ -47,7 +48,6 @@ function loadConfig(){
 				try{
 					// 尝试读取并解析
 					var ymlConfig = await yaml.parse(fs.readFileSync(`${__dirname}/config.yml`, 'utf-8'))
-					global.config = ymlConfig;
 					resolve(ymlConfig);
 				}catch(err){
 					// 报错
@@ -69,26 +69,27 @@ function loadConfig(){
 		 */
 		var parseLang = function(ymlConfig){
 			return new Promise(function (resolve, reject){
-				var lang = ymlConfig.server.lang;
-				var ymlLang = yaml.parse(fs.readFileSync(`${__dirname}/lang.yml`, 'utf-8'));
-				if(lang in ymlLang){
-					resolve(ymlLang);
-				}else{
-					reject(new Error(`Invalid language: ${lang}`));
+				try{
+					var lang = ymlConfig.server.lang;
+					var ymlLang = yaml.parse(fs.readFileSync(`${__dirname}/lang.yml`, 'utf-8'));
+					if(lang in ymlLang){
+						resolve(ymlLang[ymlConfig.server.lang]);
+					}else{
+						reject(new Error(`Invalid language: ${lang}`));
+					}
+				}catch(err){
+					reject(new Error(`Failed to parse language file: ${err.stack}`));
 				}
-			}).then(function(ymlLang){
-				global.lang = ymlLang[ymlConfig.server.lang];
-				resolve(ymlLang);
-			}, async function(err){
-				reject(new Error(`Failed to parse language file: ${err.stack}`));
 			});
 		}
 		// 同步执行
-		parseConfig().then(function(ymlConfig){
-			return ymlConfig, parseLang(ymlConfig); // return ymlConfig, ymlLang;
-		}).catch(function(err){
+		try{
+			var ymlConfig = await parseConfig();
+			var ymlLang = await parseLang(ymlConfig);
+			resolve([ymlConfig, ymlLang]);
+		}catch(err){
 			reject(err);
-		});
+		};
 	});
 }
 
@@ -98,8 +99,8 @@ function loadConfig(){
  * @returns {Promise.null} 无返回值的Promise 加载成功
  * @throws {Promise.Error} "Failed to load database" 因为一些未捕获的原因无法加载数据库
  */
-async function loadDatabase(config){
-	return new Promise(async function(resolve, reject){
+function loadDatabase(config){
+	return new Promise(function(resolve, reject){
 		// 判断数据库存在且可读写
 		try{
 			fs.accessSync(path.join(__dirname, config.db.dataFile), fs.constants.F_OK | fs.constants.W_OK);
@@ -115,7 +116,7 @@ async function loadDatabase(config){
 				dbApi.new(dbPath, sqlList).then(function(db){
 					database = db;
 				}, function(err){
-					emptyLine(async function(){
+					emptyLine(function(){
 						exit(() => {err ? error(new Error(lang.server.createDatabaseFailed.render(err.stack))) : log(lang.server.createdDatabase)});
 					});
 				});
@@ -126,88 +127,111 @@ async function loadDatabase(config){
 		}
 		try{
 			// 尝试加载数据库
-			var database = await dbApi.load(path.join(__dirname, config.db.dataFile));
+			var loadDB = function(){
+				return new Promise(function(resolve, reject){
+					dbApi.load(path.join(__dirname, config.db.dataFile)).then(function(data){
+						resolve(data || null);
+					}, function(err){
+						reject(err);
+					});
+				});
+			}
 			// 加载聊天数据表
-			var loadChat = dbApi.list(database, "chat").then(function(data){
-				resolve(lang.server.loadedData);
-				chatList = JSON.parse(data);
-			}, function(err){
-				reject(err);
-				chatList = {};
-			});
+			var loadChat = function(database){
+				return new Promise(function(resolve, reject){
+					dbApi.list(database, "chat").then(function(data){
+						resolve(data || {});
+					}, function(err){
+						reject(err);
+					});
+				});
+			}
 			// 加载用户数据表
-			var loadUser = dbApi.list(database, "user").then(function(data){
-				resolve(lang.server.loadedData);
-				userList = JSON.parse(data);
-			}, function(err){
-				reject(err);
-				userList = {};
-			});
+			var loadUser = function(database){
+				return new Promise(function(resolve, reject){
+					dbApi.list(database, "user").then(function(data){
+						resolve(data || {});
+					}, function(err){
+						reject(err);
+					});
+				});
+			}
 			// 加载页面数据表
-			var loadPage = dbApi.list(database, "page").then(function(data){
-				resolve(lang.server.loadedData);
-				pageList = JSON.parse(data);
-			}, function(err){
-				reject(err);
-				pageList = {};
-			});
-			//创建验证码数组
-			Promise.all([loadChat, loadUser, loadPage]).then(function(){
-				global.database = database;
-				resolve(database);
+			var loadPage = function(database){
+				return new Promise(function(resolve, reject){
+					dbApi.list(database, "page").then(function(data){
+						resolve(data || {});
+					}, function(err){
+						reject(err);
+					});
+				});
+			}
+			// 公开全部
+			loadDB().then(async function(database){
+				var chatList = await loadChat(database);
+				var userList = await loadUser(database);
+				var pageList = await loadPage(database);
+				resolve([chatList, userList, pageList, database]);
 			}).catch(function(err){
-				reject(new Error(lang.server.loadDataFailed.render(err.stack)));
-			})
-			captchaList = {};
-		}catch(err){
-			reject(new Error(`Failed to load database: ${err.stack}`));
-		}
-	});
-}
-function promptSync(){
-	return new Promise(function(resolve){
-		rl.question(config.server.prompt, function(input){
-			resolve(input);
-		});
-	});
-}
-			
-function handle(){
-	return new Promise(async function(resolve, reject){
-		try{
-			await loadConfig();
-			await loadDatabase(config, lang);
+				reject(err);
+			});
 		}catch(err){
 			reject(err);
 		}
-		resolve();
-	}).then(function(){
-		var app = express();
-		httpApi(app);
-		pageApi(app);
-		chatApi(app);
-		rl.setPrompt(config.server.prompt);
-		app.listen(config.server.port, config.server.host, async function(){
-			info(lang.server.serverRunningAt.render(config.server.host, config.server.port));
-			while(1){
-				var input = await promptSync();
-				var argv = input.split(config.server.argvSplit);
-				if(argv[0] != ""){
+	});
+}
+			
+new Promise(async function(resolve, reject){
+	[global.config, global.lang] = await loadConfig();
+	try{	
+		[global.chatList, global.userList, global.pageList, global.database] = await loadDatabase(config);
+		//创建验证码数组
+		global.captchaList = {};
+	}catch(err){
+		reject(err);
+	}
+	resolve();
+}).then(function(){
+	var app = express();
+	httpApi(app);
+	pageApi(app);
+	chatApi(app);
+	rl.setPrompt(config.server.prompt);
+	app.listen(config.server.port, config.server.host, async function(){
+		info(lang.server.serverRunningAt.render(config.server.host, config.server.port));
+		while(1){
+			var input = await rlsync.question();
+			var argv = input.split(config.server.argvSplit);
+			if(argv[0] != ""){
+				debug(`cmdEval: ${argv.join(" ")}`);
+				if(argv[0] == "eval"){
+					try{
+						eval(argv.slice(1).join(' '));
+					}catch(err){
+						emptyLine(() => {error(err.stack)});
+					}
+				}else{
 					if(!(argv[0] in cmdApi)){
 						emptyLine(() => {
 							warn(lang.server.invalidCmd.render(argv[0]));
 							rl.prompt();
 						});
 					}else{
-						eval(`cmdApi.${argv[0]}(argv.slice(1))`);
+						var cmd = `cmdApi.${argv[0]}(${'\`' + argv.slice(1).join('\`,\`') + '\`'})`;
+						emptyLine(() => {debug(`cmdEval: ${cmd}`)});
+						try{
+							eval(cmd);
+						}catch(err){
+							emptyLine(() => {error(err.stack)});
+						}
 					}
 				}
 			}
-		});
-	}, function(err){
-		exit(() => error(err.stack));
-	}).catch(function(err){
-		exit(() => error(lang.server.loadDataFailed.render(err.stack)));
+		}
 	});
-}
-handle();
+}, function(err){
+	console.dir(global);
+	exit(() => error(lang.server.loadDataFailed.render(err.stack)));
+}).catch(function(err){
+	exit(() => fatal(err.stack));
+});

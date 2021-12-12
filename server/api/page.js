@@ -7,7 +7,6 @@
 const utils = require('./utils');
 eval(utils.console.setup);
 
-const cheerio = require('cheerio');
 const url = require('url');
 async function savePage(pageUrl){
 	const userAgents = [

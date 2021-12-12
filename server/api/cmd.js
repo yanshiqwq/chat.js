@@ -1,6 +1,7 @@
 const utils = require('./utils');
 eval(utils.console.setup);
 
+const chalk = require('chalk');
 const dbApi = require('./db');
 const cmdApi = {
 	'list': function(){
@@ -11,46 +12,29 @@ const cmdApi = {
 		emptyLine(() => {log(lang.cmd.list.countUser.render(userTokens.length))});
 		info(userTokens.join(config.cmd.userSplit));
 	},
-	'kick': function(argv){
-		if("close" in userList[argv[1]]){
-			try{
-				userList[argv[1]].close();
-			}catch(err){
-				emptyLine(() => {warn(lang.cmd.kick.kickFailed.render(argv[1], err.stack))});
-			}
+	'register': function(id, key){
+		id = id || "test";
+		key = key || "";
+		var uid = guid();
+		userList[uid] = {id: id, key: key};
+		emptyLine(() =>{info(lang.http.register.newUser.render(id, uid, key))});
+	},
+	'stop': function(force){
+		if(force){
+			//if(await rlsync.keyInYN(lang.server.forceStop)){
+				exit(() => {warn("cmdEval: forceStop")});
+			//}else{
+			//	return;
+			//} 
 		}else{
-			var kicked = false;
-			for(var user in userList){
-				if(user.id == argv[1]){
-					user.close();
-					kicked = true;
+			dbApi.save(database, [userList, pageList, chatList], async function(err){
+				if(err){
+					emptyLine(() => {warn(lang.cmd.stop.saveFailed.render(err.stack))});
+				}else{
+					exit(() => {log(lang.cmd.stop.saved)});
 				}
-			}
+			});
 		}
-		if(kicked == false){
-			emptyLine(() => {warn(lang.cmd.kick.connectionNotExist.render(argv[1]))});
-		}
-	},
-	'eval': function(){
-		try{
-			eval(input.slice(5));
-		}catch(err){
-			error(err.stack);
-		}
-	},
-	'stop': function(){
-		dbApi.saveData(JSON.stringify({
-			user: userList, 
-			page: pageList,
-			chat: chatList
-		}), async function(err){
-			if(err){
-				emptyLine(() => {warn(lang.cmd.stop.saveFailed.render(err.stack))});
-			}else{
-				await emptyLine(() => {log(lang.cmd.stop.saved)});
-				process.exit();
-			}
-		});
 	}
 }
 module.exports = cmdApi;

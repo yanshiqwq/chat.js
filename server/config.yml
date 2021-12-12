@@ -14,7 +14,7 @@ http:
   noise: 3
   ignoreChars: "0oO1ilI"
   toLowerCase: true
-  html: "%s<br/>%s"
+  captchaHtml: "%s<br/>%s"
   captchaHeader:
     json:
       Content-Type: "text/json; charset=utf-8"
